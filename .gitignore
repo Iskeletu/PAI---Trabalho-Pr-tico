@@ -6,7 +6,7 @@
 !src/
 src/**
 !constants.py
-!raw_image_reading.py
+!image_reading.py
 
 # Input/Output directories and its contents.
 !input/

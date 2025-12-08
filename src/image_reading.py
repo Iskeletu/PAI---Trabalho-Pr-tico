@@ -1,5 +1,5 @@
 """
-File reading implementation.
+Image file reading implementation (normal and raw).
 """
 
 # Native Modules:
@@ -12,8 +12,6 @@ from constants import INPUT_FILE_PATH
 # External Modules:
 import numpy as np
 import matplotlib.pyplot as mpl
-
-# Constants:
 
 
 class RawImageReader:
