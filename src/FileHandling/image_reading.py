@@ -4,36 +4,38 @@ Image file reading implementation (normal and raw).
 
 # Native Modules:
 from pathlib import Path
-from typing import Tuple
 
 # Internal Modules:
-from constants import INPUT_FILE_PATH
+import PSE.image_display as ID
 
 # External Modules:
 import numpy as np
-import matplotlib.pyplot as mpl
 
 
 class RawImageReader:
     """
     RAW image file reader (8 bits, grayscale).
 
+    Private_Attributes:
+        - 
+
     Methods:
         - `dimensions` (@property): Property type method that returns the image
         dimensions as a list, position 0 being width and position 1 being height.
+        - `image` (@property): Property type method that returns the image data
+        as a numpy.ndarray object.
 
     Private Methods:
         - `_read_image`: Reads RAW image files and processes it as a NumPy array
         with format (_height, _width) and dtype `uint8`.
     """
 
-    def __init__(self, file_name:str, width:int, height:int) -> None:
+    def __init__(self, file_path:str|Path, width:int, height:int) -> None:
         """
-        Initializes an instance of GuiCommand class.
+        Initializes an instance of RawImageReader class.
 
         Parameters:
-            - file_name: String containing the image file name (with file
-            extension) to be searched in the input directory.
+            - file_path: A string or a PathLib.Path object to the image file to be read.
             - width: Image width in pixels.
             - height: Image height in pixels.
         """
@@ -45,7 +47,7 @@ class RawImageReader:
         self._height:int            = int(height)
         self._expected_size:int     = (int(width) * int(height))
 
-        self._raw_image:np.ndarray  = self._read_image(file_name)
+        self._raw_image:np.ndarray  = self._read_image(Path(file_path))
 
     @property
     def dimensions(self) -> list[int, int]:
@@ -59,25 +61,34 @@ class RawImageReader:
 
         return [self._width, self._height]
 
-    def _read_image(self, file_name:str) -> np.ndarray:
+    @property
+    def image(self) -> np.ndarray:
+        """
+        Returns the raw image data from the image reader object as a numpy.ndarray
+        object.
+
+        Usage:
+            >>> image:numpy.ndarray = reader.image
+        """
+
+        return self._raw_image
+
+    def _read_image(self, file_path:Path) -> np.ndarray:
         """
         Reads RAW image files and processes it as a NumPy array with format
         (_height, _width) and dtype `uint8`.
 
         Parameters:
-            - file_name: String containing the image file name (with file
-            extension) to be searched in the input directory.
+            - file_path: A PathLib.Path object to the image file to be read.
 
         Return:
             The image data as a shaped numpy.ndarray (height, width) and dtype `uint8`.
         """
-        
-        FILE_PATH:Path = (INPUT_FILE_PATH / file_name).resolve()
 
-        if not FILE_PATH.exists():
-            raise FileNotFoundError(f"File not found: {FILE_PATH}")
+        if not file_path.exists():
+            raise FileNotFoundError(f"File not found: {file_path}")
 
-        raw_data = FILE_PATH.read_bytes()
+        raw_data = file_path.read_bytes()
 
         if len(raw_data) != self._expected_size:
             raise ValueError(
@@ -96,12 +107,11 @@ class RawImageReader:
         Displays object image.
         """
 
-        mpl.imshow(self._raw_image, cmap="gray", vmin=0, vmax=255)
-        mpl.axis("off")
-        mpl.show()
+        ID.display(self._raw_image)
 
 
 
 # This is NOT a script file.
 if __name__ == '__main__':
     raise RuntimeError("This module is not a standalone script.")
+    

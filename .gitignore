@@ -7,6 +7,15 @@
 src/**
 !constants.py
 !image_reading.py
+!script.py
+
+!FileHandling/
+!image_reading.py
+
+!PSE/
+!blocks.py
+!image_display.py
+!problem_solving_environment.py
 
 # Input/Output directories and its contents.
 !input/
