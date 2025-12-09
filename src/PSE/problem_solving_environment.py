@@ -31,6 +31,7 @@ class PSE_GUI:
         - `_add_threshold_block`: Adds the threshold block to the end of the pipeline.
         - `_add_histogram_block`: Adds the histogram block to the end of the pipeline.
         - `_add_convolution_block`: Adds the convolution block to the end of the pipeline.
+        - `_add_difference_block`: Adds the difference block to the end of the pipeline.
         - `_process_pipeline`: Executes the constructed pipeline.
         - `_reset_app`: Resets all the widgets to the original configuration.
     """
@@ -87,6 +88,18 @@ class PSE_GUI:
         #--------------------------- Control Buttons --------------------------
         buttons_frame = tk.Frame(self._root)
         buttons_frame.pack(fill="x", padx=5, pady=5)
+
+        tk.Button(
+            buttons_frame,
+            text="Exibir Imagem",
+            command=self._add_display_block,
+        ).pack(side="left", padx=2)
+
+        tk.Button(
+            buttons_frame,
+            text="Salvar .RAW",
+            command=self._add_saveraw_block,
+        ).pack(side="left", padx=2)
 
         tk.Button(
             buttons_frame,
@@ -147,6 +160,62 @@ class PSE_GUI:
         if path:
             self._path_var.set(path)
 
+    def _add_display_block(self) -> None:
+        """
+        Adds a display block to the end of the pipeline in the blocks section of the interface.
+        Shows the current image when executed.
+        """
+
+        frame = tk.Frame(self._blocks_frame, bd=1, relief="solid", pady=2)
+        frame.pack(fill="x", padx=2, pady=2)
+
+        tk.Label(frame, text="Exibir imagem").pack(side="left")
+
+        # Título opcional da janela de exibição
+        title_var = tk.StringVar(
+            value=f"Imagem após bloco {len(self._blocks)}"
+        )
+        tk.Entry(frame, textvariable=title_var, width=30).pack(
+            side="left", padx=4
+        )
+
+        block = blocks.DisplayBlock(title_var)
+        self._blocks.append(block)
+
+    def _add_saveraw_block(self) -> None:
+        """
+        Adds a save raw block to the end of the pipeline in the blocks section of the interface.
+        Saves the current image to a .raw file.
+        """
+
+        frame = tk.Frame(self._blocks_frame, bd=1, relief="solid", pady=2)
+        frame.pack(fill="x", padx=2, pady=2)
+
+        tk.Label(frame, text="Gravar imagem RAW").pack(side="left")
+
+        file_frame = tk.Frame(frame)
+        file_frame.pack(side="left", padx=4)
+
+        path_var = tk.StringVar()
+        tk.Entry(file_frame, textvariable=path_var, width=30).pack(
+            side="left", padx=(0, 2)
+        )
+
+        def browse_save():
+            path = filedialog.asksaveasfilename(
+                defaultextension=".raw",
+                filetypes=[("RAW files", "*.raw"), ("Todos os arquivos", "*.*")],
+            )
+            if path:
+                path_var.set(path)
+
+        tk.Button(file_frame, text="...", command=browse_save, width=3).pack(
+            side="left"
+        )
+
+        block = blocks.SaveRawBlock(path_var)
+        self._blocks.append(block)
+
     def _add_brightness_block(self) -> None:
         """
         Adds a brightness block to the end of the pipeline in the blocks section of the interface.
@@ -190,28 +259,155 @@ class PSE_GUI:
 
     def _add_convolution_block(self) -> None:
         """
-        Adds a convolution block to the end of the pipeline in the blocks section of the interface.
+        Adds a convolution block to the end of the pipeline in the blocks section
+        of the interface.
+
+        - Allows the user to choose the size of the mask (3x3, 5x5, 7x7, 9x9).
+        - Include preset masks: Avarege, Laplaciano (4 / 8 neighbours).
         """
+
         frame = tk.Frame(self._blocks_frame, bd=1, relief="solid", pady=2)
         frame.pack(fill="x", padx=2, pady=2)
 
-        tk.Label(frame, text="Convolução 3x3 (kernel):").pack(
-            side="top", anchor="w"
+        header_frame = tk.Frame(frame)
+        header_frame.pack(fill="x")
+
+        tk.Label(header_frame, text="Convolução local").pack(side="left")
+
+        tk.Label(header_frame, text="  Tamanho:").pack(side="left", padx=(10, 2))
+        size_var = tk.StringVar(value="3")
+        size_spin = tk.Spinbox(
+            header_frame,
+            from_=1,
+            to=9,
+            increment=2,          # 1, 3, 5, 7, 9...
+            width=4,
+            textvariable=size_var,
         )
+        size_spin.pack(side="left")
+
+        tk.Label(header_frame, text="  Máscara:").pack(side="left", padx=(10, 2))
+        preset_var = tk.StringVar(value="Personalizada")
+        preset_menu = tk.OptionMenu(
+            header_frame,
+            preset_var,
+            "Personalizada",
+            "Média",
+            "Laplaciano (4-vizinhos)",
+            "Laplaciano (8-vizinhos)",
+        )
+        preset_menu.pack(side="left")
 
         grid_frame = tk.Frame(frame)
-        grid_frame.pack()
+        grid_frame.pack(pady=2)
 
-        entries = []
-        for i in range(3):
-            for j in range(3):
-                e = tk.Entry(grid_frame, width=4)
-                e.grid(row=i, column=j, padx=1, pady=1)
-                e.insert(0, "0")
-                entries.append(e)
+        entries_matrix: list[list[tk.Entry]] = []
 
-        block = blocks.ConvolutionBlock(entries)
-        self._blocks.append(block)
+        conv_block = blocks.ConvolutionBlock(size_var, entries_matrix)
+        self._blocks.append(conv_block)
+
+        def build_grid(*_args):
+            """
+            (Re)construct the input grid given choosen size.
+            """
+            nonlocal entries_matrix
+
+            # Clears previous grid:
+            for child in grid_frame.winfo_children():
+                child.destroy()
+            entries_matrix = []
+
+            try:
+                n = int(size_var.get())
+            except ValueError:
+                n = 3
+
+            if n < 1:
+                n = 1
+
+            for i in range(n):
+                row: list[tk.Entry] = []
+                for j in range(n):
+                    e = tk.Entry(grid_frame, width=4)
+                    e.grid(row=i, column=j, padx=1, pady=1)
+                    e.insert(0, "0")
+                    row.append(e)
+                entries_matrix.append(row)
+
+            conv_block.set_entries_matrix(entries_matrix)
+
+        def apply_preset(*_args):
+            """
+            Fills any grid size (n > 1) with implemented presets.
+            """
+            nonlocal entries_matrix
+            preset = preset_var.get()
+
+            if not entries_matrix:
+                return
+
+            n = len(entries_matrix)
+
+            for row in entries_matrix:
+                if len(row) != n:
+                    return
+
+            if preset == "Personalizada":
+                return
+
+            if preset == "Média":
+                value = 1.0 / (n * n)
+                for i in range(n):
+                    for j in range(n):
+                        e = entries_matrix[i][j]
+                        e.delete(0, tk.END)
+                        e.insert(0, f"{value:.4f}")
+                return
+
+            if n < 3:
+                return
+
+            for i in range(n):
+                for j in range(n):
+                    e = entries_matrix[i][j]
+                    e.delete(0, tk.END)
+                    e.insert(0, "0")
+
+            c = n // 2
+
+            if preset == "Laplaciano (4-vizinhos)":
+                entries_matrix[c][c].delete(0, tk.END)
+                entries_matrix[c][c].insert(0, "4")
+
+                coords = [
+                    (c - 1, c),
+                    (c + 1, c),
+                    (c, c - 1),
+                    (c, c + 1),
+                ]
+                for i, j in coords:
+                    if 0 <= i < n and 0 <= j < n:
+                        e = entries_matrix[i][j]
+                        e.delete(0, tk.END)
+                        e.insert(0, "-1")
+
+            elif preset == "Laplaciano (8-vizinhos)":
+                for di in (-1, 0, 1):
+                    for dj in (-1, 0, 1):
+                        i = c + di
+                        j = c + dj
+                        if 0 <= i < n and 0 <= j < n:
+                            e = entries_matrix[i][j]
+                            e.delete(0, tk.END)
+                            if di == 0 and dj == 0:
+                                e.insert(0, "8")
+                            else:
+                                e.insert(0, "-1")
+
+        build_grid()
+
+        size_var.trace_add("write", lambda *args: build_grid())
+        preset_var.trace_add("write", lambda *args: apply_preset())
 
     def _add_difference_block(self) -> None:
         """

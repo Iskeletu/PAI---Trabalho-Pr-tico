@@ -4,12 +4,13 @@
 import tkinter as tk
 
 # Internal Modules:
+import PSE.image_display as ID
 import FileHandling.image_reading as IR
 
 # External Modules:
 import numpy as np
-import matplotlib.pyplot as mpl
 from pathlib import Path
+import matplotlib.pyplot as mpl
 
 
 class Block:
@@ -25,6 +26,48 @@ class Block:
         """Applies the transformation to the image."""
 
         raise NotImplementedError
+
+
+class DisplayBlock(Block):
+    """
+    Bloco de exibição de imagem.
+
+    Mostra a imagem atual usando o módulo PSE.image_display e
+    devolve a mesma imagem (não altera o pipeline).
+    """
+
+    def __init__(self, title_var: tk.StringVar | None = None) -> None:
+        self._title_var = title_var
+
+    def apply(self, image: np.ndarray) -> np.ndarray:
+        title = self._title_var.get() if self._title_var is not None else "Imagem"
+        ID.display(image, title)
+        return image
+
+
+class SaveRawBlock(Block):
+    """
+    Bloco de gravação RAW.
+
+    Salva a imagem atual em um arquivo .raw (8 bits, grayscale),
+    sem cabeçalho. Não altera a imagem do pipeline.
+    """
+
+    def __init__(self, path_var: tk.StringVar) -> None:
+        self._path_var = path_var
+
+    def apply(self, image: np.ndarray) -> np.ndarray:
+        path_str = self._path_var.get()
+        if not path_str:
+            raise ValueError("Nenhum arquivo de saída definido no bloco de gravação RAW.")
+
+        file_path = Path(path_str)
+        file_path.parent.mkdir(parents=True, exist_ok=True)
+
+        arr = np.clip(image, 0, 255).astype(np.uint8)
+        file_path.write_bytes(arr.tobytes())
+
+        return image
 
 
 class BrightnessBlock(Block):
@@ -75,23 +118,47 @@ class HistogramBlock(Block):
 
 
 class ConvolutionBlock(Block):
-    def __init__(self, kernel_entries: list[tk.Entry]):
-        self.kernel_entries = kernel_entries  # entradas 3x3
+    """
+    Bloco de convolução local.
 
-    def get_kernel(self) -> np.ndarray:
-        vals = []
-        for e in self.kernel_entries:
-            try:
-                vals.append(float(e.get()))
-            except ValueError:
-                vals.append(0.0)
-        kernel = np.array(vals).reshape((3, 3))
+    - O tamanho do kernel é inferido de `entries_matrix` (n x n).
+    - Os pesos são lidos das entradas de texto.
+    """
+
+    def __init__(self, size_var, entries_matrix) -> None:
+        # size_var: tk.StringVar (usado só pra GUI)
+        # entries_matrix: list[list[tk.Entry]]
+        self._size_var = size_var
+        self._entries_matrix = entries_matrix
+
+    def set_entries_matrix(self, entries_matrix) -> None:
+        """Atualiza a referência da matriz de entradas (quando a GUI recria o grid)."""
+        self._entries_matrix = entries_matrix
+
+    def _get_kernel(self) -> np.ndarray:
+        if not self._entries_matrix:
+            raise RuntimeError("Kernel não definido: matriz de entradas vazia.")
+
+        n = len(self._entries_matrix)
+        values: list[float] = []
+
+        for row in self._entries_matrix:
+            # garante que é uma linha com n colunas
+            if len(row) != n:
+                raise RuntimeError("Matriz de entradas não é quadrada.")
+            for e in row:
+                try:
+                    values.append(float(e.get()))
+                except Exception:
+                    values.append(0.0)
+
+        kernel = np.asarray(values, dtype=float).reshape((n, n))
         return kernel
 
     def apply(self, image: np.ndarray) -> np.ndarray:
-        kernel = self.get_kernel()
-        k = kernel.shape[0]  # 3
-        pad = k // 2         # 1
+        kernel = self._get_kernel()
+        k = kernel.shape[0]
+        pad = k // 2
 
         # padding com zeros
         padded = np.pad(
@@ -102,7 +169,7 @@ class ConvolutionBlock(Block):
         )
 
         h, w = image.shape
-        out = np.zeros_like(image, dtype=np.float32)
+        out = np.zeros((h, w), dtype=np.float32)
 
         # convolução "na mão"
         for i in range(h):
