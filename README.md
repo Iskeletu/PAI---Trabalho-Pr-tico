@@ -166,13 +166,12 @@ PAI---Trabalho-Pr-tico/
 │   │   │   #  - DifferenceBlock (diferença entre imagens)
 │   │   │   #  - DisplayBlock (exibição em qualquer ponto do fluxo)
 │   │   │   #  - SaveRawBlock (gravação de RAW em qualquer ponto)
-│   │   ├── image_display.py
-│   │   │   # Funções auxiliares para exibir imagens e histogramas
-│   │   │   # (tipicamente usando matplotlib / Pillow)
-│   │   └── ...
+│   │   └── image_display.py
+│   │       # Funções auxiliares para exibir imagens e histogramas
+│   │       # (tipicamente usando matplotlib / Pillow)
 │   └── FileHandling/
-│       ├── image_reading.py
-│       └── # Classe RawImageReader: lê imagens RAW 8 bits (sem cabeçalho)
+│       └── image_reading.py
+│           # Classe RawImageReader: lê imagens RAW 8 bits (sem cabeçalho)
 ├── ExecutarProjeto.bat    # Script de execução rápido do projeto (instala dependencias e executa script Python primário)
 ├── requirements.txt       # Lista de dependências Python do projeto
 ├── config.ini             # Arquivo de configuração (parâmetros gerais) [Não implementado]
