@@ -15,6 +15,9 @@ _PROJECT_FILE_PATH:Path = (Path(__file__).parent.parent).resolve()  # Project fi
 INPUT_FILE_PATH:Path    = (_PROJECT_FILE_PATH / "input/").resolve()  # Image input file directory absolute path (as a pathlib Path object).
 OUTPUT_FILE_PATH:Path   = (_PROJECT_FILE_PATH / "output/").resolve() # Image output file directory absolute path (as a pathlib Path object).
 
+TARGET_WIDTH:Final[int]     = 640 # Target image width for image conversion to raw file. 
+TARGET_HEIGHT:Final[int]    = 360 # Target image height for image conversion to raw file.
+
 
 # This is NOT a script file.
 if __name__ == '__main__':

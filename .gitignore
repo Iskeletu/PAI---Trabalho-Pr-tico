@@ -6,6 +6,7 @@
 !src/
 src/**
 !constants.py
+!convert_to_raw.py
 !image_reading.py
 !script.py
 

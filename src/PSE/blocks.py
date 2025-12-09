@@ -1,11 +1,15 @@
 """Block class defition file for PSE_GUI."""
 
-# Internal Modules:
+# Native Modules:
 import tkinter as tk
+
+# Internal Modules:
+import FileHandling.image_reading as IR
 
 # External Modules:
 import numpy as np
 import matplotlib.pyplot as mpl
+from pathlib import Path
 
 
 class Block:
@@ -108,3 +112,60 @@ class ConvolutionBlock(Block):
 
         out = np.clip(out, 0, 255)
         return out.astype(np.uint8)
+
+
+class DifferenceBlock(Block):
+    """
+    Bloco que calcula a diferença entre a imagem atual do pipeline
+    e uma outra imagem RAW escolhida pelo usuário.
+
+    A outra imagem é definida por:
+    - caminho do arquivo RAW
+    - largura e altura informadas no próprio bloco
+    """
+
+    def __init__(
+        self,
+        path_var: tk.StringVar,
+        width_var: tk.StringVar,
+        height_var: tk.StringVar,
+    ) -> None:
+        self._path_var = path_var
+        self._width_var = width_var
+        self._height_var = height_var
+
+    def apply(self, image: np.ndarray) -> np.ndarray:
+        # pega dados da interface
+        path_str = self._path_var.get()
+        if not path_str:
+            raise ValueError("Nenhum arquivo RAW selecionado no bloco de diferença.")
+
+        try:
+            w = int(self._width_var.get())
+            h = int(self._height_var.get())
+        except ValueError:
+            raise ValueError("Largura e/ou altura inválidas no bloco de diferença.")
+
+        if w <= 0 or h <= 0:
+            raise ValueError("Largura e altura devem ser positivas no bloco de diferença.")
+
+        path = Path(path_str)
+
+        # lê a segunda imagem RAW
+        reader = IR.RawImageReader(path, w, h)
+        other = reader.image
+
+        # checa se tem o mesmo tamanho da imagem atual do pipeline
+        if other.shape != image.shape:
+            raise ValueError(
+                f"As imagens devem ter o mesmo tamanho para a diferença.\n"
+                f"Imagem do pipeline: {image.shape}, outra imagem: {other.shape}"
+            )
+
+        # diferença absoluta |img1 - img2|
+        a = image.astype(np.int16)
+        b = other.astype(np.int16)
+        diff = np.abs(a - b)
+        diff = np.clip(diff, 0, 255).astype(np.uint8)
+
+        return diff

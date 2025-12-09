@@ -63,7 +63,7 @@ class PSE_GUI:
         )
 
         tk.Label(top, text="Largura:").grid(row=1, column=0, sticky="w")
-        self._width_var = tk.StringVar(value="506")
+        self._width_var = tk.StringVar(value="640")
         tk.Entry(top, textvariable=self._width_var, width=8).grid(
             row=1, column=1, sticky="w"
         )
@@ -110,6 +110,12 @@ class PSE_GUI:
             buttons_frame,
             text="Adicionar histograma",
             command=self._add_histogram_block,
+        ).pack(side="left", padx=2)
+
+        tk.Button(
+            buttons_frame,
+            text="Adicionar diferença",
+            command=self._add_difference_block,
         ).pack(side="left", padx=2)
 
         control_frame = tk.Frame(self._root)
@@ -205,6 +211,63 @@ class PSE_GUI:
                 entries.append(e)
 
         block = blocks.ConvolutionBlock(entries)
+        self._blocks.append(block)
+
+    def _add_difference_block(self) -> None:
+        """
+        Adds a difference block to the end of the pipeline.
+        A diferença é feita entre a imagem atual do pipeline
+        e uma outra imagem RAW escolhida no próprio bloco.
+        """
+
+        frame = tk.Frame(self._blocks_frame, bd=1, relief="solid", pady=2)
+        frame.pack(fill="x", padx=2, pady=2)
+
+        # título do bloco
+        tk.Label(frame, text="Diferença com outra imagem RAW").pack(
+            side="top", anchor="w"
+        )
+
+        # linha de seleção de arquivo
+        file_frame = tk.Frame(frame)
+        file_frame.pack(fill="x", pady=1)
+
+        tk.Label(file_frame, text="Arquivo:").pack(side="left")
+
+        path_var = tk.StringVar()
+        tk.Entry(file_frame, textvariable=path_var, width=30).pack(
+            side="left", padx=2
+        )
+
+        def browse_other_file():
+            path = filedialog.askopenfilename(
+                filetypes=[("RAW files", "*.raw"), ("Todos os arquivos", "*.*")]
+            )
+            if path:
+                path_var.set(path)
+
+        tk.Button(file_frame, text="Procurar...", command=browse_other_file).pack(
+            side="left", padx=2
+        )
+
+        # linha de largura/altura
+        size_frame = tk.Frame(frame)
+        size_frame.pack(fill="x", pady=1)
+
+        tk.Label(size_frame, text="Largura:").pack(side="left")
+        width_var = tk.StringVar()
+        tk.Entry(size_frame, textvariable=width_var, width=6).pack(
+            side="left", padx=2
+        )
+
+        tk.Label(size_frame, text="Altura:").pack(side="left")
+        height_var = tk.StringVar()
+        tk.Entry(size_frame, textvariable=height_var, width=6).pack(
+            side="left", padx=2
+        )
+
+        # cria o bloco lógico e adiciona na lista do pipeline
+        block = blocks.DifferenceBlock(path_var, width_var, height_var)
         self._blocks.append(block)
 
     def _process_pipeline(self):
