@@ -32,3 +32,6 @@ src/**
 !LICENSE
 !README.md
 !requirements.txt
+
+# Project execution script:
+!Executar_Projeto.bat
